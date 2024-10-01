@@ -1,0 +1,78 @@
+#!/usr/bin/python3
+
+import numpy as np
+import networkx as nx
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+
+purple_line_stations = [
+    "Baiyappanahalli", "Swami Vivekananda Road", "Indiranagar", "Halasuru", "Trinity",
+    "Mahatma Gandhi Road", "Cubbon Park", "Vidhana Soudha", "Sir M Visvesvaraya Station",
+    "Kempegowda Station Majestic", "City Railway Station", "Magadi Road", "Hosahalli",
+    "Vijayanagar", "Attiguppe", "Deepanjali Nagar", "Mysore Road"
+]
+
+green_line_stations = [
+    "Nagasandra", "Jalahalli", "Dasarahalli", "Tumkur Road", "Yeshwanthpur",
+    "Sandal Soap Factory", "Mahalakshmi", "Rajajinagar", "Kuvempu Road", "Srirampura",
+    "Mantri Square Sampige Road", "Kempegowda Station Majestic", "Chickpete", "Krishna Rajendra Market",
+    "National College", "Lalbagh", "South End Circle", "Jayanagar", "Rashtreeya Vidyalaya Road",
+    "Banashankari", "J P Nagar", "Yelachenahalli"
+]
+
+purple_line_edges = [(purple_line_stations[i], purple_line_stations[i+1]) for i in range(len(purple_line_stations) - 1)]
+green_line_edges = [(green_line_stations[i], green_line_stations[i+1]) for i in range(len(green_line_stations) - 1)]
+
+all_stations = list(set(purple_line_stations + green_line_stations))
+all_edges = purple_line_edges + green_line_edges
+
+G = nx.Graph()
+G.add_nodes_from(all_stations)
+G.add_edges_from(all_edges)
+
+populations = {station: np.random.randint(50, 300) for station in all_stations}
+
+flow_rates = {(edge[0], edge[1]): np.random.randint(20, 100) for edge in all_edges}
+
+def update_populations(t, populations, flow_rates):
+    new_populations = populations.copy()
+    for (i, j), flow in flow_rates.items():
+        new_populations[i] -= flow * np.sin(t / 10)
+        new_populations[j] += flow * np.sin(t / 10)
+    return new_populations
+
+def visualize_bengaluru_metro(populations, flow_rates, num_frames=100):
+    pos = nx.spring_layout(G)
+    
+    fig, ax = plt.subplots(figsize=(12, 8)) 
+    
+    def update(frame):
+        ax.clear()
+        
+        curr_populations = update_populations(frame, populations, flow_rates)
+        
+        node_colors = []
+        for node in G.nodes:
+            if node in purple_line_stations:
+                node_colors.append('purple')
+            elif node in green_line_stations:
+                node_colors.append('green')
+        
+        nx.draw_networkx(G, pos, ax=ax, node_size=[v * 7 for v in curr_populations.values()],
+                         node_color=node_colors, with_labels=True, font_weight='bold', 
+                         edge_color='gray', font_size=10) 
+
+        edge_labels = {edge: f'{int(flow * np.sin(frame / 10))}' for edge, flow in flow_rates.items()}
+        nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, font_size=8)
+        
+        for station, pop in curr_populations.items():
+            ax.text(pos[station][0], pos[station][1] + 0.05, f'{int(pop)} people', 
+                    fontsize=10, color='black', ha='center')
+        
+        ax.set_title(f"Namma Metro Simulation - Time: {frame}\n"
+                     f"Daily Ridership: Purple Line: 191,056 | Green Line: 170,685", fontsize=14)
+
+    ani = animation.FuncAnimation(fig, update, frames=num_frames, repeat=True, interval=300)
+    plt.show()
+
+visualize_bengaluru_metro(populations, flow_rates)
